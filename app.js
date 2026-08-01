@@ -24,10 +24,23 @@ app.get('/', (req, res) => {
 });
 
 // Route for POST requests
-app.post('/', (req, res) => {
+app.post('/', async (req, res) => {
   const timestamp = new Date().toISOString().replace('T', ' ').slice(0, 19);
   console.log(`\n\nWebhook received ${timestamp}\n`);
   console.log(JSON.stringify(req.body, null, 2));
+
+  try {
+    await fetch('https://unstable-morphine-fried.ngrok-free.dev', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(req.body)
+    });
+  } catch (err) {
+    console.error('Error forwarding webhook:', err);
+  }
+
   res.status(200).end();
 });
 
