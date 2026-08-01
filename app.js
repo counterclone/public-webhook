@@ -1,17 +1,14 @@
-// Import Express.js
 const express = require('express');
 
-// Create an Express app
 const app = express();
 
-// Middleware to parse JSON bodies
-app.use(express.json());
+// Use express.raw to preserve exact raw body bytes for signature verification
+app.use(express.raw({ type: 'application/json' }));
 
-// Set port and verify_token
 const port = process.env.PORT || 3000;
 const verifyToken = process.env.VERIFY_TOKEN;
 
-// Route for GET requests
+// Route for GET requests (Webhook Verification)
 app.get('/', (req, res) => {
   const { 'hub.mode': mode, 'hub.challenge': challenge, 'hub.verify_token': token } = req.query;
 
@@ -23,19 +20,33 @@ app.get('/', (req, res) => {
   }
 });
 
-// Route for POST requests
+// Route for POST requests (Forwarding Webhooks)
 app.post('/', async (req, res) => {
   const timestamp = new Date().toISOString().replace('T', ' ').slice(0, 19);
   console.log(`\n\nWebhook received ${timestamp}\n`);
-  console.log(JSON.stringify(req.body, null, 2));
+  
+  // Log body for debugging
+  try {
+    console.log(JSON.parse(req.body.toString('utf8')));
+  } catch (e) {
+    console.log(req.body.toString('utf8'));
+  }
+
+  // Forward raw body and signature header to ngrok
+  const signatureHeader = req.headers['x-hub-signature-256'];
 
   try {
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+    if (signatureHeader) {
+      headers['x-hub-signature-256'] = signatureHeader;
+    }
+
     await fetch('https://unstable-morphine-fried.ngrok-free.dev/api/whatsapp/webhook', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(req.body)
+      headers,
+      body: req.body // Send exact raw buffer
     });
   } catch (err) {
     console.error('Error forwarding webhook:', err);
@@ -44,7 +55,6 @@ app.post('/', async (req, res) => {
   res.status(200).end();
 });
 
-// Start the server
 app.listen(port, () => {
   console.log(`\nListening on port ${port}\n`);
 });
