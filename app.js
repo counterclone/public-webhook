@@ -30,7 +30,7 @@ app.post('/', async (req, res) => {
   console.log(JSON.stringify(req.body, null, 2));
 
   try {
-    await fetch('https://unstable-morphine-fried.ngrok-free.dev', {
+    await fetch('https://unstable-morphine-fried.ngrok-free.dev/api/whatsapp/webhook', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
